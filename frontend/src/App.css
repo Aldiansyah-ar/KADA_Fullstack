@@ -1,0 +1,28 @@
+/* app.css */
+
+.post-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 20px;
+  justify-content: center;
+}
+
+.custom-card {
+  width: 300px;
+  transition: transform 0.2s ease;
+}
+
+.custom-card:hover {
+  transform: scale(1.05);
+}
+
+.custom-link {
+  color: #1890ff;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.custom-link:hover {
+  text-decoration: underline;
+}
