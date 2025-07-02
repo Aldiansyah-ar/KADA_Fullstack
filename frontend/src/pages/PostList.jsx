@@ -10,85 +10,90 @@ const PostList = () => {
     const [posts, setPosts] = useState([]);
     const [filteredPosts, setFilteredPosts] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [counter, setCounter] = useState(1000);
     const [searchText, setSearchText] = useState('');
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [form] = Form.useForm();
 
     useEffect(() => {
-        fetch(`http://localhost:3000/posts`)
-            .then(res => res.json())
-            .then(data => {
-                setPosts(data);
-                setFilteredPosts(data);
-                setLoading(false);
-            })
-            .catch(() => {
-                message.error("Failed to fetch posts");
-                setLoading(false);
-            });
+        fetchPosts();
     }, []);
+
+    const fetchPosts = async (keyword = '') => {
+        setLoading(true);
+        try {
+            let url = 'http://localhost:3000/posts';
+            if (keyword) {
+                url += `?keyword=${encodeURIComponent(keyword)}`;
+            }
+
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error('Failed to fetch posts');
+            }
+            const data = await response.json();
+            setPosts(data);
+            setDisplayedPosts(data);
+        } catch (error) {
+            console.error("Error fetching posts:", error);
+            message.error("Failed to fetch posts");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const showAddModal = () => {
         form.resetFields();
         setIsModalVisible(true);
     };
 
-    const handleAddPost = () => {
-        form.validateFields()
-            .then(values => {
-                const newPost = {
-                    id: counter,
+    const handleAddPost = async () => {
+        try {
+            const values = await form.validateFields();
+            const response = await fetch(`http://localhost:3000/posts`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
                     title: values.title,
-                    content: values.content,
-                };
-
-                fetch(`http://localhost:3000/posts`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(newPost),
-                })
-                    .then(res => {
-                        if (!res.ok) {
-                            throw new Error('Failed to add post');
-                        }
-                        return res.json();
-                    })
-                    .then(data => {
-                        const newPosts = [data, ...posts];
-                        setPosts(newPosts);
-                        filterPosts(newPosts, searchText);
-                        setCounter(counter + 1);
-                        setIsModalVisible(false);
-                        message.success("Post added to server");
-                    })
-                    .catch(() => {
-                        message.error("Failed to add post to server");
-                    });
-            })
-            .catch(() => {
-                message.error("Please fill in the form correctly");
+                    content: values.content
+                }),
             });
+
+            if (!response.ok) {
+                throw new Error('Failed to add post');
+            }
+
+            const newPost = await response.json();
+            const newPosts = [newPost, ...posts];
+            setPosts(newPosts);
+            filterPosts(newPosts, searchText);
+            setIsModalVisible(false);
+            message.success("Post added successfully");
+        } catch (error) {
+            console.error("Error adding post:", error);
+            message.error(error.message || "Failed to add post");
+        }
     };
 
-    const handleDeletePost = (id) => {
-        fetch(`http://localhost:3000/posts/${id}`, {
-            method: 'DELETE',
-        })
-            .then(res => {
-                if (!res.ok) {
-                    throw new Error('Failed to delete post');
-                }
-                const newPosts = posts.filter(post => post.id !== id);
-                setPosts(newPosts);
-                filterPosts(newPosts, searchText);
-                message.success("Post deleted from server");
-            })
-            .catch(() => {
-                message.error("Failed to delete post from server");
+    const handleDeletePost = async (postId) => {
+        try {
+            const response = await fetch(`http://localhost:3000/posts/${postId}`, {
+                method: 'DELETE',
             });
+
+            if (!response.ok) {
+                throw new Error('Failed to delete post');
+            }
+
+            const newPosts = posts.filter(post => post._id !== postId);
+            setPosts(newPosts);
+            filterPosts(newPosts, searchText);
+            message.success("Post deleted successfully");
+        } catch (error) {
+            console.error("Error deleting post:", error);
+            message.error("Failed to delete post");
+        }
     };
 
     const handleSearch = (value) => {
@@ -97,8 +102,13 @@ const PostList = () => {
     };
 
     const filterPosts = (allPosts, text) => {
+        if (!text) {
+            setFilteredPosts(allPosts);
+            return;
+        }
         const filtered = allPosts.filter(post =>
-            post.title.toLowerCase().includes(text.toLowerCase())
+            post.title.toLowerCase().includes(text.toLowerCase()) ||
+            post.content.toLowerCase().includes(text.toLowerCase())
         );
         setFilteredPosts(filtered);
     };
@@ -118,6 +128,7 @@ const PostList = () => {
                         placeholder="Search posts..."
                         allowClear
                         onSearch={handleSearch}
+                        onChange={(e) => handleSearch(e.target.value)}
                         style={{ width: 300 }}
                     />
                 </div>
@@ -134,7 +145,7 @@ const PostList = () => {
                         }}
                         renderItem={post => (
                             <List.Item
-                                key={post.id}
+                                key={post._id}
                                 style={{
                                     background: '#fff',
                                     marginBottom: '16px',
@@ -146,20 +157,28 @@ const PostList = () => {
                                 <List.Item.Meta
                                     title={
                                         <Space>
-                                            <span>#{post.id}</span>
-                                            <Link to={`/posts/${post.id}`}>{post.title}</Link>
+                                            <Link to={`/posts/${post._id}`}>{post.title}</Link>
                                         </Space>
                                     }
-                                    description={post.content}
+                                    description={
+                                        <>
+                                            <div>{post.content}</div>
+                                            {post.createdAt && (
+                                                <div style={{ fontSize: '0.8em', color: '#666', marginTop: '8px' }}>
+                                                    Created: {new Date(post.createdAt).toLocaleString()}
+                                                </div>
+                                            )}
+                                        </>
+                                    }
                                 />
                                 <Space>
-                                    <Link to={`/posts/${post.id}`}>
+                                    <Link to={`/posts/${post._id}`}>
                                         <Button type="link">View</Button>
                                     </Link>
                                     <Button
                                         danger
                                         size="small"
-                                        onClick={() => handleDeletePost(post.id)}
+                                        onClick={() => handleDeletePost(post._id)}
                                     >
                                         Delete
                                     </Button>

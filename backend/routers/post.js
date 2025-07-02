@@ -16,12 +16,6 @@ router.get('/', async (req, res) => {
     if (!keyword) {
         res.json(await Post.find())
     }
-    // if (keyword) {
-    //     const lowerKeyword = keyword.toLocaleString();
-    //     result = posts.filter(
-    //         post => post.title.toLowerCase().includes(lowerKeyword) || post.content.toLowerCase().includes(lowerKeyword)
-    //     )
-    // }
     
     const findPosts = Post.find({
         $or: [
@@ -42,32 +36,39 @@ router.post('/', async (req, res) => {
 })
 
 router.put('/:postId', async (req, res) => {
-    const postId = Number(req.params.postId);
+    const postId = req.params.postId;
     const {title, content} = req.body;
 
     const updatedPost = await Post.findByIdAndUpdate(postId, {
         title,
         content
     }, {
-        returnDocument: "before"
+        returnDocument: "after"
     })
     res.json(updatedPost);
 })
 
-router.delete("/:postId", (req, res) => {
-    const postId = Number(req.params.postId);
-    const post = posts.find((item) => item.id === postId)
+router.delete("/:postId", async (req, res) => {
+    try {
+        const postId = req.params.postId;
+        const deletedPost = await Post.findByIdAndDelete(postId);
 
-    if (!post) {
-        return res.status(404).json({ message: "Post not found" })
+        if (!deletedPost) {
+            return res.status(404).json({ message: "Post not found" });
+        }
+
+        res.json({
+            success: true,
+            message: "Post deleted successfully",
+            deletedPost
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Error deleting post",
+            error: error.message
+        });
     }
-
-    const updatedPosts = posts.filter((item) => item.id !== postId);
-
-    posts.length = 0;
-    posts.push(...updatedPosts)
-    
-    res.json(post);
-})
+});
 
 export default router

@@ -19,32 +19,38 @@ const PostDetail = () => {
     fetchComments();
   }, [postId]);
 
-  const fetchPost = () => {
+  const fetchPost = async () => {
     setLoading(true);
-    fetch(`http://localhost:3000/posts/${postId}`)
-      .then(res => res.json())
-      .then(data => {
-        setPost(data);
-        setLoading(false);
-      })
-      .catch(error => {
-        console.error("Error loading post:", error);
-        setLoading(false);
-      });
+    try {
+      const response = await fetch(`http://localhost:3000/posts/${postId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch post');
+      }
+      const data = await response.json();
+      setPost(data);
+    } catch (error) {
+      console.error("Error loading post:", error);
+      message.error('Failed to load post');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const fetchComments = () => {
+  const fetchComments = async () => {
     setCommentsLoading(true);
-    fetch(`http://localhost:3000/posts/${postId}/comments`)
-      .then(res => res.json())
-      .then(data => {
-        setComments(data);
-        setCommentsLoading(false);
-      })
-      .catch(error => {
-        console.error("Error loading comments:", error);
-        setCommentsLoading(false);
-      });
+    try {
+      const response = await fetch(`http://localhost:3000/posts/${postId}/comments`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch comments');
+      }
+      const data = await response.json();
+      setComments(data);
+    } catch (error) {
+      console.error("Error loading comments:", error);
+      message.error('Failed to load comments');
+    } finally {
+      setCommentsLoading(false);
+    }
   };
 
   const handleEdit = () => {
@@ -57,36 +63,31 @@ const PostDetail = () => {
     setIsEditing(false);
   };
 
-  const handleSave = () => {
-    const updatedPost = {
-      ...post,
-      title: editTitle,
-      content: editContent,
-    };
-
-    // Update ke backend
-    fetch(`http://localhost:3000/posts/${postId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(updatedPost),
-    })
-      .then(res => {
-        if (!res.ok) {
-          throw new Error('Failed to update post');
-        }
-        return res.json();
-      })
-      .then(data => {
-        setPost(data);
-        setIsEditing(false);
-        message.success('Post updated successfully!');
-      })
-      .catch(error => {
-        console.error("Error updating post:", error);
-        message.error('Failed to update post');
+  const handleSave = async () => {
+    try {
+      const response = await fetch(`http://localhost:3000/posts/${post._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: editTitle,
+          content: editContent
+        }),
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to update post');
+      }
+
+      const updatedPost = await response.json();
+      setPost(updatedPost);
+      setIsEditing(false);
+      message.success('Post updated successfully!');
+    } catch (error) {
+      console.error("Error updating post:", error);
+      message.error('Failed to update post');
+    }
   };
 
   return (
@@ -95,74 +96,88 @@ const PostDetail = () => {
 
       {loading ? (
         <Spin size="large" style={{ display: 'block', marginTop: 50 }} />
+      ) : post ? (
+        <Card
+          title="Post Details"
+          bordered={false}
+          style={{ marginTop: 20 }}
+          extra={!isEditing && (
+            <Button type="primary" onClick={handleEdit}>
+              Edit
+            </Button>
+          )}
+        >
+          {isEditing ? (
+            <>
+              <Input
+                value={editTitle}
+                onChange={e => setEditTitle(e.target.value)}
+                placeholder="Title"
+                style={{ marginBottom: 10 }}
+              />
+              <TextArea
+                rows={4}
+                value={editContent}
+                onChange={e => setEditContent(e.target.value)}
+                placeholder="Content"
+                style={{ marginBottom: 10 }}
+              />
+              <div>
+                <Button type="primary" onClick={handleSave} style={{ marginRight: 8 }}>
+                  Save
+                </Button>
+                <Button onClick={handleCancel}>Cancel</Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <h2>{post.title}</h2>
+              <p>{post.content}</p>
+              {post.createdAt && (
+                <p style={{ color: 'gray', fontSize: '0.8em' }}>
+                  Created: {new Date(post.createdAt).toLocaleString()}
+                </p>
+              )}
+              {post.updatedAt && post.updatedAt !== post.createdAt && (
+                <p style={{ color: 'gray', fontSize: '0.8em' }}>
+                  Last updated: {new Date(post.updatedAt).toLocaleString()}
+                </p>
+              )}
+            </>
+          )}
+        </Card>
       ) : (
-        post && (
-          <Card
-            title={`Post #${postId}`}
-            bordered={false}
-            style={{ marginTop: 20 }}
-            extra={!isEditing && (
-              <Button type="primary" onClick={handleEdit}>
-                Edit
-              </Button>
-            )}
-          >
-            {isEditing ? (
-              <>
-                <Input
-                  value={editTitle}
-                  onChange={e => setEditTitle(e.target.value)}
-                  placeholder="Title"
-                  style={{ marginBottom: 10 }}
-                />
-                <TextArea
-                  rows={4}
-                  value={editContent}
-                  onChange={e => setEditContent(e.target.value)}
-                  placeholder="Content"
-                  style={{ marginBottom: 10 }}
-                />
-                <div>
-                  <Button type="primary" onClick={handleSave} style={{ marginRight: 8 }}>
-                    Save
-                  </Button>
-                  <Button onClick={handleCancel}>Cancel</Button>
-                </div>
-              </>
-            ) : (
-              <>
-                <h2>{post.title}</h2>
-                <p>{post.content}</p>
-              </>
-            )}
-          </Card>
-
-        )
+        <p>Post not found</p>
       )}
 
       <Divider>Comments</Divider>
 
       {commentsLoading ? (
         <Spin />
+      ) : comments.length > 0 ? (
+        comments.map(comment => (
+          <Card
+            key={comment._id}
+            type="inner"
+            title={`Comment`}
+            style={{ marginBottom: 15 }}
+            extra={comment.createdAt && (
+              <span>{new Date(comment.createdAt).toLocaleString()}</span>
+            )}
+          >
+            <p>{comment.content}</p>
+            {comment.author && (
+              <p style={{ color: 'gray', fontSize: '0.8em' }}>
+                By: {comment.author}
+              </p>
+            )}
+          </Card>
+        ))
       ) : (
-        comments.length > 0 ? (
-          comments.map(comment => (
-            <Card
-              key={comment.id}
-              type="inner"
-              title={`Comment #${comment.id}`}
-              style={{ marginBottom: 15 }}
-            >
-              <p>{comment.content}</p>
-            </Card>
-          ))
-        ) : (
-          <p>No comments available.</p>
-        )
+        <p>No comments available.</p>
       )}
     </div>
   );
 };
 
 export default PostDetail;
-
