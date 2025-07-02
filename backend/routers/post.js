@@ -1,64 +1,57 @@
 import { Router } from "express";
 import commentRouter from "./comment.js"
+import Post from "../models/posts.model.js"
 
 const router = Router();
 
-const posts = [
-    {id: 1, title: 'first post', content: 'this is my first post'},
-    {id: 2, title: 'second post', content: 'this is my second post'},
-    {id: 3, title: 'third post', content: 'this is my third post'},
-    {id: 4, title: 'fourth post', content: 'this is my fourth post'}
-];
-
 router.use('/:postId/comments', commentRouter)
 
-router.get('/:postId', (req, res) => {
-    const postId = parseInt(req.params.postId);
-    const matchedPosts = posts.filter((post) => post.id === postId);
-
-    if (matchedPosts.length === 0) {
-        return res.status(404).json({ message: "Post not found"});
-    }
-
-    res.json(matchedPosts)
-})
-
-router.get('/', (req, res) => {
-    const {keyword} = req.query;
-    let result = posts;
-    if (keyword) {
-        const lowerKeyword = keyword.toLocaleString();
-        result = posts.filter(
-            post => post.title.toLowerCase().includes(lowerKeyword) || post.content.toLowerCase().includes(lowerKeyword)
-        )
-    }
+router.get('/:postId', async (req, res) => {
+    const result = await Post.findById(req.params.postId)
     res.json(result)
 })
 
-router.post('/', (req, res) => {
-    const {title, content} = req.body;
-    const id = posts[posts.length - 1].id + 1;
-
-    const newPost = {
-        id: id+1,
-        title,
-        content
+router.get('/', async (req, res) => {
+    const {keyword} = req.query;
+    if (!keyword) {
+        res.json(await Post.find())
     }
-    posts.push(newPost);
-    res.json(newPost);
-    res.status(201).json(newPost);
+    // if (keyword) {
+    //     const lowerKeyword = keyword.toLocaleString();
+    //     result = posts.filter(
+    //         post => post.title.toLowerCase().includes(lowerKeyword) || post.content.toLowerCase().includes(lowerKeyword)
+    //     )
+    // }
+    
+    const findPosts = Post.find({
+        $or: [
+            {title: {$regex: `.*${keyword}.*`}},
+            {content: {$regex: `.*${keyword}.*`}}
+        ]
+    })
+    res.json(findPosts)
 })
 
-router.put('/:postId', (req, res) => {
+router.post('/', async (req, res) => {
+    const {title, content} = req.body;
+    const createdPost = await Post.create({
+        title,
+        content
+    })
+    res.status(201).json(createdPost);
+})
+
+router.put('/:postId', async (req, res) => {
     const postId = Number(req.params.postId);
     const {title, content} = req.body;
-    const idx = posts.findIndex((item) => item.id == postId);
-    const post = posts[idx];
 
-    post.title = title;
-    post.content = content;
-
-    res.json(post);
+    const updatedPost = await Post.findByIdAndUpdate(postId, {
+        title,
+        content
+    }, {
+        returnDocument: "before"
+    })
+    res.json(updatedPost);
 })
 
 router.delete("/:postId", (req, res) => {
