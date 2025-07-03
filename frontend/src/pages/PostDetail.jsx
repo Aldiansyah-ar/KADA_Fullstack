@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Card, Spin, Divider, Button, Input, message } from 'antd';
+import InfiniteScroll from 'react-infinite-scroll-component';
 
 const { TextArea } = Input;
 
@@ -13,6 +14,8 @@ const PostDetail = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [editContent, setEditContent] = useState('');
+  const [newComment, setNewComment] = useState('');
+  const [addingComment, setAddingComment] = useState(false);
 
   useEffect(() => {
     fetchPost();
@@ -90,6 +93,38 @@ const PostDetail = () => {
     }
   };
 
+  const handleAddComment = async () => {
+    if (!newComment.trim()) return;
+
+    setAddingComment(true);
+    try {
+      const response = await fetch(`http://localhost:3000/posts/${postId}/comments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          content: newComment,
+          author: 'Anonymous' // Ubah ini jika ada sistem login
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to add comment');
+      }
+
+      const addedComment = await response.json();
+      setComments(prev => [...prev, addedComment]);
+      setNewComment('');
+      message.success('Comment added!');
+    } catch (error) {
+      console.error("Error adding comment:", error);
+      message.error('Failed to add comment');
+    } finally {
+      setAddingComment(false);
+    }
+  };
+
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
       <Link to="/posts">Back to Posts</Link>
@@ -159,10 +194,9 @@ const PostDetail = () => {
           <Card
             key={comment._id}
             type="inner"
-            title={`Comment`}
             style={{ marginBottom: 15 }}
             extra={comment.createdAt && (
-              <span>{new Date(comment.createdAt).toLocaleString()}</span>
+              <span>Created at: {new Date(comment.createdAt).toLocaleString()}</span>
             )}
           >
             <p>{comment.content}</p>
@@ -176,6 +210,23 @@ const PostDetail = () => {
       ) : (
         <p>No comments available.</p>
       )}
+
+      <Divider>Add a Comment</Divider>
+      <TextArea
+        rows={3}
+        value={newComment}
+        onChange={e => setNewComment(e.target.value)}
+        placeholder="Write your comment here..."
+        style={{ marginBottom: 10 }}
+      />
+      <Button
+        type="primary"
+        onClick={handleAddComment}
+        loading={addingComment}
+        disabled={!newComment.trim()}
+      >
+        Submit Comment
+      </Button>
     </div>
   );
 };
