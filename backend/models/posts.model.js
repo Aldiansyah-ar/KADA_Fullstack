@@ -10,7 +10,8 @@ const PostSchema = new Schema(
             type: String,
             required: true
         },
-        comments: [{type: mongoose.Schema.Types.ObjectId, ref: "Comment"}]
+        comments: [{type: mongoose.Schema.Types.ObjectId, ref: "Comment"}],
+        author: {type: mongoose.Schema.Types.ObjectId, ref: "User", index: true}
     },
     {
         timestamps:  true

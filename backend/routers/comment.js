@@ -16,6 +16,27 @@ router.get("/", async (req, res) => {
   }
 });
 
+// router.get("/", async (req, res) => {
+//   const page = Number(req.query.page)
+//   const pageSize = Number(req.query.pageSize)
+//   const skip = (page - 1) * pageSize;
+
+//   try {
+//     const total = await Comment.countDocuments({ post: req.params.postId })
+//     const comments = await Comment.find({ post: req.params.postId }).sort({
+//       createdAt: -1,
+//     }).skip(skip).limit(pageSize);
+//     res.json({
+//         data: comments,
+//         total,
+//         page,
+//         pageSize
+//     })
+//   } catch (err) {
+//     res.status(500).json({ message: err.message });
+//   }
+// });
+
 // Add a new comment
 router.post("/", async (req, res) => {
   try {

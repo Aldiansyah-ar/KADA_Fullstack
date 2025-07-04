@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Card, Spin, Divider, Button, Input, message } from 'antd';
+import { Card, Spin, Divider, Button, Input, message, Avatar } from 'antd';
 import InfiniteScroll from 'react-infinite-scroll-component';
+import { UserOutlined } from '@ant-design/icons';
 
 const { TextArea } = Input;
 
@@ -185,32 +186,6 @@ const PostDetail = () => {
         <p>Post not found</p>
       )}
 
-      <Divider>Comments</Divider>
-
-      {commentsLoading ? (
-        <Spin />
-      ) : comments.length > 0 ? (
-        comments.map(comment => (
-          <Card
-            key={comment._id}
-            type="inner"
-            style={{ marginBottom: 15 }}
-            extra={comment.createdAt && (
-              <span>Created at: {new Date(comment.createdAt).toLocaleString()}</span>
-            )}
-          >
-            <p>{comment.content}</p>
-            {comment.author && (
-              <p style={{ color: 'gray', fontSize: '0.8em' }}>
-                By: {comment.author}
-              </p>
-            )}
-          </Card>
-        ))
-      ) : (
-        <p>No comments available.</p>
-      )}
-
       <Divider>Add a Comment</Divider>
       <TextArea
         rows={3}
@@ -227,6 +202,34 @@ const PostDetail = () => {
       >
         Submit Comment
       </Button>
+
+      <Divider>Comments</Divider>
+
+      {commentsLoading ? (
+        <Spin />
+      ) : comments.length > 0 ? (
+        comments.map(comment => (
+        <Card
+          key={comment._id}
+          type="inner"
+          style={{ marginBottom: 15 }}
+          extra={comment.createdAt && (
+            <span>Created at: {new Date(comment.createdAt).toLocaleString()}</span>
+          )}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10 }}>
+            <Avatar icon={<UserOutlined />} style={{ marginRight: 10 }} />
+            <span style={{ fontWeight: 'bold' }}>
+              {comment.author || 'Anonymous User'}
+            </span>
+          </div>
+          <p>{comment.content}</p>
+        </Card>
+      ))
+      ) : (
+        <p>No comments available.</p>
+      )}
+
     </div>
   );
 };

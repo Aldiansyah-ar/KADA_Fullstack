@@ -1,6 +1,7 @@
 import { Router } from "express";
 import commentRouter from "./comment.js"
 import Post from "../models/posts.model.js"
+import { isUserValidator } from "./validators/post.validator.js";
 
 const router = Router();
 
@@ -50,7 +51,7 @@ router.get('/', async (req, res) => {
     })
 })
 
-router.post('/', async (req, res) => {
+router.post('/', isUserValidator, async (req, res) => {
     const {title, content} = req.body;
     const createdPost = await Post.create({
         title,
