@@ -1,4 +1,4 @@
-import mongoose, {Schema} from 'mongoose';
+import mongoose, {Schema} from "mongoose"
 
 const PostSchema = new Schema(
     {
@@ -14,7 +14,7 @@ const PostSchema = new Schema(
         author: {type: mongoose.Schema.Types.ObjectId, ref: "User", index: true}
     },
     {
-        timestamps:  true
+        timestamps: true
     }
 )
 
